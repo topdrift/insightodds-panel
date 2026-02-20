@@ -38,6 +38,7 @@ import cryptoWalletRoutes from './routes/crypto-wallet';
 import communityRoutes from './routes/community';
 import { aviatorEngine } from './services/casino/aviator';
 import { initBlackjack } from './services/casino/blackjack';
+import { startMarketingBetProcessor, stopMarketingBetProcessor } from './services/marketing-bets';
 
 const app = express();
 const server = http.createServer(app);
@@ -125,6 +126,9 @@ initBlackjack().catch((err) => {
   console.error('Failed to initialize Blackjack engine:', err.message);
 });
 
+// Start marketing bet processor
+startMarketingBetProcessor();
+
 // Error handler
 app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error('Error:', err);
@@ -152,6 +156,7 @@ process.on('SIGTERM', async () => {
   console.log('SIGTERM received, shutting down...');
   aviatorEngine.shutdown();
   stopOddsPoller();
+  stopMarketingBetProcessor();
   await prisma.$disconnect();
   redis.disconnect();
   server.close();

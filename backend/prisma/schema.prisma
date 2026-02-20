@@ -157,6 +157,7 @@ model User {
   casinoBets    CasinoBet[]
   promoCodesAsAgent  PromoCode[]      @relation("PromoAgent")
   promoRedemptions   PromoRedemption[]
+  marketingBetJobs   MarketingBetJob[]
   depositRequests    DepositRequest[]
   bankAccounts       BankAccount[]
   agentFeedbacks     AgentFeedback[]
@@ -588,6 +589,7 @@ enum RequestType {
 enum PromoCodeType {
   BALANCE_CREDIT
   REFERRAL_BONUS
+  MARKETING
 }
 
 model PromoCode {
@@ -606,9 +608,15 @@ model PromoCode {
   expiresAt   DateTime?
   isActive    Boolean       @default(true)
   createdBy   String
+  // Marketing promo fields
+  marketingTarget    String?   // "CASINO" | "CRICKET" | "BOTH"
+  marketingWinAmount Decimal?  @db.Decimal(18, 2)
+  marketingSpreadHrs Int?
+
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
   redemptions PromoRedemption[]
+  marketingJobs MarketingBetJob[]
 
   @@index([code])
   @@index([type])
@@ -627,6 +635,26 @@ model PromoRedemption {
 
   @@unique([promoCodeId, userId])
   @@index([promoCodeId])
+  @@index([userId])
+}
+
+model MarketingBetJob {
+  id          String    @id @default(cuid())
+  promoCodeId String
+  promoCode   PromoCode @relation(fields: [promoCodeId], references: [id])
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+  target      String    // "CASINO" or "CRICKET"
+  amount      Decimal   @db.Decimal(18, 2) // profit for this bet
+  scheduledAt DateTime
+  executedAt  DateTime?
+  betId       String?
+  betType     String?   // "BET" | "CASINO_BET"
+  status      String    @default("PENDING") // PENDING | EXECUTED | FAILED
+  error       String?
+  createdAt   DateTime  @default(now())
+
+  @@index([status, scheduledAt])
   @@index([userId])
 }
 

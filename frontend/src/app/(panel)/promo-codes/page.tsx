@@ -26,14 +26,31 @@ import {
   Eye,
   Hash,
   Search,
+  Target,
+  Clock,
+  Zap,
 } from 'lucide-react';
 
 /* ───────────────────────── Types ───────────────────────── */
 
+interface MarketingBetJob {
+  id: string;
+  userId: string;
+  target: string;
+  amount: string;
+  scheduledAt: string;
+  executedAt: string | null;
+  betId: string | null;
+  betType: string | null;
+  status: string;
+  error: string | null;
+  createdAt: string;
+}
+
 interface PromoCode {
   id: string;
   code: string;
-  type: 'BALANCE_CREDIT' | 'REFERRAL_BONUS';
+  type: 'BALANCE_CREDIT' | 'REFERRAL_BONUS' | 'MARKETING';
   description: string | null;
   amount: string;
   agentId: string | null;
@@ -48,6 +65,10 @@ interface PromoCode {
   createdBy: string;
   createdAt: string;
   updatedAt: string;
+  marketingTarget: string | null;
+  marketingWinAmount: string | null;
+  marketingSpreadHrs: number | null;
+  marketingJobs?: MarketingBetJob[];
   _count: { redemptions: number };
 }
 
@@ -90,6 +111,7 @@ function AdminPromoManager() {
   const [editItem, setEditItem] = useState<PromoCode | null>(null);
   const [detailItem, setDetailItem] = useState<PromoCode | null>(null);
   const [detailRedemptions, setDetailRedemptions] = useState<PromoRedemption[]>([]);
+  const [detailMarketingJobs, setDetailMarketingJobs] = useState<MarketingBetJob[]>([]);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [search, setSearch] = useState('');
@@ -100,7 +122,7 @@ function AdminPromoManager() {
 
   const [form, setForm] = useState({
     code: '',
-    type: 'BALANCE_CREDIT' as 'BALANCE_CREDIT' | 'REFERRAL_BONUS',
+    type: 'BALANCE_CREDIT' as 'BALANCE_CREDIT' | 'REFERRAL_BONUS' | 'MARKETING',
     description: '',
     amount: 0,
     agentId: '',
@@ -109,6 +131,9 @@ function AdminPromoManager() {
     maxUses: 0,
     expiresAt: '',
     isActive: true,
+    marketingTarget: 'BOTH' as 'CASINO' | 'CRICKET' | 'BOTH',
+    marketingWinAmount: 0,
+    marketingSpreadHrs: 3,
   });
 
   const [editForm, setEditForm] = useState({
@@ -158,6 +183,9 @@ function AdminPromoManager() {
       maxUses: 0,
       expiresAt: '',
       isActive: true,
+      marketingTarget: 'BOTH',
+      marketingWinAmount: 0,
+      marketingSpreadHrs: 3,
     });
   };
 
@@ -179,10 +207,15 @@ function AdminPromoManager() {
       };
       if (form.type === 'BALANCE_CREDIT') {
         payload.amount = form.amount;
-      } else {
+      } else if (form.type === 'REFERRAL_BONUS') {
         payload.agentId = form.agentId || undefined;
         payload.agentBonus = form.agentBonus;
         payload.clientBonus = form.clientBonus;
+      } else if (form.type === 'MARKETING') {
+        payload.amount = form.amount;
+        payload.marketingTarget = form.marketingTarget;
+        payload.marketingWinAmount = form.marketingWinAmount;
+        payload.marketingSpreadHrs = form.marketingSpreadHrs;
       }
       await api.post('/promo', payload);
       addToast('Promo code created successfully', 'success');
@@ -252,6 +285,7 @@ function AdminPromoManager() {
       const { data } = await api.get(`/promo/${item.id}`);
       setDetailItem(data.data);
       setDetailRedemptions(data.data.redemptions || []);
+      setDetailMarketingJobs(data.data.marketingJobs || []);
     } catch {
       addToast('Failed to load details', 'error');
     }
@@ -300,6 +334,7 @@ function AdminPromoManager() {
             <option value="">All Types</option>
             <option value="BALANCE_CREDIT">Balance Credit</option>
             <option value="REFERRAL_BONUS">Referral Bonus</option>
+            <option value="MARKETING">Marketing</option>
           </select>
           <Button size="sm" variant="outline" onClick={fetchPromos} className="!rounded-xl">
             <RefreshCw className="mr-1.5 h-3.5 w-3.5" /> Refresh
@@ -345,8 +380,8 @@ function AdminPromoManager() {
                         {item.code}
                       </span>
                       <CopyButton text={item.code} />
-                      <Badge variant={item.type === 'BALANCE_CREDIT' ? 'info' : 'warning'}>
-                        {item.type === 'BALANCE_CREDIT' ? 'Balance Credit' : 'Referral Bonus'}
+                      <Badge variant={item.type === 'BALANCE_CREDIT' ? 'info' : item.type === 'MARKETING' ? 'success' : 'warning'}>
+                        {item.type === 'BALANCE_CREDIT' ? 'Balance Credit' : item.type === 'MARKETING' ? 'Marketing' : 'Referral Bonus'}
                       </Badge>
                       <button onClick={() => toggleActive(item)} className="transition-all hover:scale-105">
                         <Badge variant={item.isActive ? 'success' : 'danger'}>
@@ -364,6 +399,13 @@ function AdminPromoManager() {
                     <div className="flex flex-wrap items-center gap-3 text-xs text-gray-400">
                       {item.type === 'BALANCE_CREDIT' ? (
                         <span>Amount: <span className="text-green-400 font-medium">{formatCurrency(item.amount)}</span></span>
+                      ) : item.type === 'MARKETING' ? (
+                        <>
+                          <span>Bonus: <span className="text-green-400 font-medium">{formatCurrency(item.amount)}</span></span>
+                          {item.marketingWinAmount && <span>Win Target: <span className="text-yellow-400 font-medium">{formatCurrency(item.marketingWinAmount)}</span></span>}
+                          {item.marketingTarget && <span>Platform: <span className="text-white">{item.marketingTarget}</span></span>}
+                          {item.marketingSpreadHrs && <span>Spread: <span className="text-white">{item.marketingSpreadHrs}h</span></span>}
+                        </>
                       ) : (
                         <>
                           <span>Client: <span className="text-green-400 font-medium">{formatCurrency(item.clientBonus)}</span></span>
@@ -453,6 +495,7 @@ function AdminPromoManager() {
             >
               <option value="BALANCE_CREDIT">Balance Credit</option>
               <option value="REFERRAL_BONUS">Referral Bonus</option>
+              <option value="MARKETING">Marketing</option>
             </select>
           </div>
 
@@ -478,6 +521,69 @@ function AdminPromoManager() {
                 className="w-full rounded-xl border border-gray-600 bg-gray-800 px-4 py-3 text-sm text-white focus:border-[var(--color-secondary)] focus:outline-none"
               />
             </div>
+          ) : form.type === 'MARKETING' ? (
+            <>
+              <div className="space-y-1">
+                <label className="block text-sm font-medium text-gray-300">Instant Bonus Credit</label>
+                <input
+                  type="number"
+                  min="1"
+                  step="0.01"
+                  value={form.amount}
+                  onChange={(e) => setForm({ ...form, amount: parseFloat(e.target.value) || 0 })}
+                  className="w-full rounded-xl border border-gray-600 bg-gray-800 px-4 py-3 text-sm text-white focus:border-[var(--color-secondary)] focus:outline-none"
+                  required
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="block text-sm font-medium text-gray-300">Target Platform</label>
+                <select
+                  value={form.marketingTarget}
+                  onChange={(e) => setForm({ ...form, marketingTarget: e.target.value as any })}
+                  className="w-full rounded-xl border border-gray-600 bg-gray-800 px-4 py-3 text-sm text-white focus:border-[var(--color-secondary)] focus:outline-none"
+                >
+                  <option value="BOTH">Both (Casino + Cricket)</option>
+                  <option value="CASINO">Casino Only</option>
+                  <option value="CRICKET">Cricket Only</option>
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="block text-sm font-medium text-gray-300">Total Win Amount</label>
+                  <input
+                    type="number"
+                    min="1"
+                    step="0.01"
+                    value={form.marketingWinAmount}
+                    onChange={(e) => setForm({ ...form, marketingWinAmount: parseFloat(e.target.value) || 0 })}
+                    className="w-full rounded-xl border border-gray-600 bg-gray-800 px-4 py-3 text-sm text-white focus:border-[var(--color-secondary)] focus:outline-none"
+                    required
+                  />
+                  <p className="text-[10px] text-gray-500">+/-10% variance applied automatically</p>
+                </div>
+                <div className="space-y-1">
+                  <label className="block text-sm font-medium text-gray-300">Spread Over (hours)</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="48"
+                    value={form.marketingSpreadHrs}
+                    onChange={(e) => setForm({ ...form, marketingSpreadHrs: parseInt(e.target.value) || 1 })}
+                    className="w-full rounded-xl border border-gray-600 bg-gray-800 px-4 py-3 text-sm text-white focus:border-[var(--color-secondary)] focus:outline-none"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="rounded-xl bg-yellow-500/10 border border-yellow-500/20 px-4 py-3">
+                <p className="text-xs text-yellow-400 flex items-center gap-1.5">
+                  <Zap className="h-3.5 w-3.5" />
+                  Winning bets will be auto-generated on real matches/games over the configured time window
+                </p>
+              </div>
+            </>
           ) : (
             <>
               <div className="space-y-1">
@@ -621,8 +727,8 @@ function AdminPromoManager() {
               <span className="font-mono text-lg font-bold text-white bg-gray-700/50 px-3 py-1.5 rounded-lg">
                 {detailItem.code}
               </span>
-              <Badge variant={detailItem.type === 'BALANCE_CREDIT' ? 'info' : 'warning'}>
-                {detailItem.type === 'BALANCE_CREDIT' ? 'Balance Credit' : 'Referral Bonus'}
+              <Badge variant={detailItem.type === 'BALANCE_CREDIT' ? 'info' : detailItem.type === 'MARKETING' ? 'success' : 'warning'}>
+                {detailItem.type === 'BALANCE_CREDIT' ? 'Balance Credit' : detailItem.type === 'MARKETING' ? 'Marketing' : 'Referral Bonus'}
               </Badge>
               <Badge variant={detailItem.isActive ? 'success' : 'danger'}>
                 {detailItem.isActive ? 'Active' : 'Inactive'}
@@ -631,8 +737,8 @@ function AdminPromoManager() {
 
             <div className="grid grid-cols-2 gap-3 text-sm">
               <div className="text-gray-400">Usage: <span className="text-white">{detailItem.usedCount}/{detailItem.maxUses || '\u221E'}</span></div>
-              {detailItem.type === 'BALANCE_CREDIT' && (
-                <div className="text-gray-400">Amount: <span className="text-green-400">{formatCurrency(detailItem.amount)}</span></div>
+              {(detailItem.type === 'BALANCE_CREDIT' || detailItem.type === 'MARKETING') && (
+                <div className="text-gray-400">{detailItem.type === 'MARKETING' ? 'Instant Bonus' : 'Amount'}: <span className="text-green-400">{formatCurrency(detailItem.amount)}</span></div>
               )}
               {detailItem.type === 'REFERRAL_BONUS' && (
                 <>
@@ -641,10 +747,56 @@ function AdminPromoManager() {
                   {detailItem.agent && <div className="text-gray-400">Agent: <span className="text-white">{detailItem.agent.name} (@{detailItem.agent.username})</span></div>}
                 </>
               )}
+              {detailItem.type === 'MARKETING' && (
+                <>
+                  {detailItem.marketingWinAmount && <div className="text-gray-400">Win Target: <span className="text-yellow-400">{formatCurrency(detailItem.marketingWinAmount)}</span></div>}
+                  {detailItem.marketingTarget && <div className="text-gray-400">Platform: <span className="text-white">{detailItem.marketingTarget}</span></div>}
+                  {detailItem.marketingSpreadHrs && <div className="text-gray-400">Spread: <span className="text-white">{detailItem.marketingSpreadHrs} hours</span></div>}
+                </>
+              )}
               {detailItem.expiresAt && (
                 <div className="text-gray-400">Expires: <span className="text-white">{formatDate(detailItem.expiresAt)}</span></div>
               )}
             </div>
+
+            {/* Marketing Jobs */}
+            {detailItem.type === 'MARKETING' && detailMarketingJobs.length > 0 && (
+              <div>
+                <h4 className="text-sm font-semibold text-white mb-2 flex items-center gap-2">
+                  <Target className="h-4 w-4 text-yellow-400" />
+                  Scheduled Bets ({detailMarketingJobs.length})
+                </h4>
+                <div className="max-h-60 overflow-y-auto space-y-2">
+                  {detailMarketingJobs.map((job) => (
+                    <div key={job.id} className="flex items-center justify-between rounded-xl bg-gray-800/50 px-4 py-3 border border-gray-700/30">
+                      <div className="flex items-center gap-3">
+                        <Badge size="sm" variant={job.target === 'CRICKET' ? 'info' : 'warning'}>
+                          {job.target}
+                        </Badge>
+                        <div>
+                          <span className="text-xs text-gray-400 flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            {formatDate(job.scheduledAt)}
+                          </span>
+                          {job.executedAt && (
+                            <span className="text-[10px] text-gray-500">Executed: {formatDate(job.executedAt)}</span>
+                          )}
+                          {job.error && (
+                            <span className="text-[10px] text-red-400">{job.error}</span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="text-sm text-green-400 font-medium">+{formatCurrency(job.amount)}</span>
+                        <Badge size="sm" variant={job.status === 'EXECUTED' ? 'success' : job.status === 'FAILED' ? 'danger' : 'warning'}>
+                          {job.status === 'EXECUTED' ? 'Executed' : job.status === 'FAILED' ? 'Failed' : 'Pending'}
+                        </Badge>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Redemptions List */}
             <div>
@@ -784,8 +936,8 @@ function ClientRedeemSection() {
                   </div>
                   <div>
                     <span className="font-mono text-sm font-bold text-white">{r.promoCode?.code}</span>
-                    <Badge size="sm" variant={r.promoCode?.type === 'BALANCE_CREDIT' ? 'info' : 'warning'} className="ml-2">
-                      {r.promoCode?.type === 'BALANCE_CREDIT' ? 'Credit' : 'Referral'}
+                    <Badge size="sm" variant={r.promoCode?.type === 'BALANCE_CREDIT' ? 'info' : r.promoCode?.type === 'MARKETING' ? 'success' : 'warning'} className="ml-2">
+                      {r.promoCode?.type === 'BALANCE_CREDIT' ? 'Credit' : r.promoCode?.type === 'MARKETING' ? 'Marketing' : 'Referral'}
                     </Badge>
                     <p className="text-[11px] text-gray-500 mt-0.5">{formatDate(r.createdAt)}</p>
                   </div>

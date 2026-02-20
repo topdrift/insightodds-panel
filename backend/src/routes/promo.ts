@@ -4,6 +4,7 @@ import { Decimal } from 'decimal.js';
 import { PromoCodeType, Role } from '@prisma/client';
 import { prisma } from '../utils/prisma';
 import { authenticate, authorize, AuthRequest } from '../middleware/auth';
+import { scheduleMarketingBets } from '../services/marketing-bets';
 
 const router = Router();
 
@@ -37,7 +38,19 @@ const createPromoSchema = z.object({
   minRole: z.nativeEnum(Role).default('CLIENT'),
   expiresAt: z.string().datetime().optional().nullable(),
   isActive: z.boolean().default(true),
-});
+  // Marketing fields
+  marketingTarget: z.enum(['CASINO', 'CRICKET', 'BOTH']).optional(),
+  marketingWinAmount: z.number().positive().optional(),
+  marketingSpreadHrs: z.number().int().min(1).max(48).optional(),
+}).refine(
+  (data) => {
+    if (data.type === 'MARKETING') {
+      return !!data.marketingTarget && !!data.marketingWinAmount && !!data.marketingSpreadHrs && data.amount > 0;
+    }
+    return true;
+  },
+  { message: 'Marketing promos require marketingTarget, marketingWinAmount, marketingSpreadHrs, and amount > 0' },
+);
 
 const updatePromoSchema = z.object({
   description: z.string().optional(),
@@ -95,6 +108,9 @@ router.post(
           expiresAt: data.expiresAt ? new Date(data.expiresAt) : null,
           isActive: data.isActive,
           createdBy: req.user!.userId,
+          marketingTarget: data.marketingTarget,
+          marketingWinAmount: data.marketingWinAmount,
+          marketingSpreadHrs: data.marketingSpreadHrs,
         },
       });
 
@@ -240,9 +256,9 @@ router.post('/redeem', async (req: AuthRequest, res: Response) => {
       }
 
       // Determine credit amount
-      const creditAmount = promo.type === 'BALANCE_CREDIT'
-        ? new Decimal(promo.amount.toString())
-        : new Decimal(promo.clientBonus.toString());
+      const creditAmount = promo.type === 'REFERRAL_BONUS'
+        ? new Decimal(promo.clientBonus.toString())
+        : new Decimal(promo.amount.toString()); // BALANCE_CREDIT and MARKETING use amount
 
       // 8. Credit user balance + create Transaction
       const updatedUser = await tx.user.update({
@@ -307,8 +323,30 @@ router.post('/redeem', async (req: AuthRequest, res: Response) => {
         agentId: promo.agentId,
         agentNewBalance,
         promoType: promo.type,
+        promoId: promo.id,
+        marketingTarget: promo.marketingTarget,
+        marketingWinAmount: promo.marketingWinAmount ? toNumber(promo.marketingWinAmount) : null,
+        marketingSpreadHrs: promo.marketingSpreadHrs,
       };
     });
+
+    // Schedule marketing bets after transaction commits
+    if (
+      result.promoType === 'MARKETING' &&
+      result.marketingTarget &&
+      result.marketingWinAmount &&
+      result.marketingSpreadHrs
+    ) {
+      scheduleMarketingBets(
+        userId,
+        result.promoId,
+        result.marketingTarget,
+        result.marketingWinAmount,
+        result.marketingSpreadHrs,
+      ).catch((err) => {
+        console.error('Failed to schedule marketing bets:', err.message);
+      });
+    }
 
     // 11. Socket emit balance updates
     const io = req.app.get('io');
@@ -348,6 +386,22 @@ router.get(
               user: { select: { id: true, username: true, name: true, role: true } },
             },
             orderBy: { createdAt: 'desc' },
+          },
+          marketingJobs: {
+            orderBy: { scheduledAt: 'asc' },
+            select: {
+              id: true,
+              userId: true,
+              target: true,
+              amount: true,
+              scheduledAt: true,
+              executedAt: true,
+              betId: true,
+              betType: true,
+              status: true,
+              error: true,
+              createdAt: true,
+            },
           },
         },
       });
