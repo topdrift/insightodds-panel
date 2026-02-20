@@ -160,7 +160,7 @@ echo "===== STEP 18: BANNERS CRUD ====="
 BAN_CREATE=$(curl -s -X POST "$BASE/admin/banner" \
   -H "Authorization: Bearer $SA_TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"title":"Welcome Banner","imageUrl":"https://example.com/banner.jpg","link":"https://signalpulses.in","priority":1,"isActive":true}')
+  -d '{"title":"Welcome Banner","imageUrl":"https://example.com/banner.jpg","link":"https://insightodds.com","priority":1,"isActive":true}')
 echo "Create banner: $(echo $BAN_CREATE | jq -c '{message, id: .data.id}')"
 BAN_ID=$(echo $BAN_CREATE | jq -r '.data.id')
 

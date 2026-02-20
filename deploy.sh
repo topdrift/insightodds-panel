@@ -6,7 +6,7 @@ set -e
 
 VPS_IP="31.57.228.137"
 VPS_USER="root"
-DOMAIN="signalpulses.in"
+DOMAIN="insightodds.com"
 APP_DIR="/opt/insightodds"
 
 echo "=== InsightOdds Panel Deployment ==="
@@ -60,7 +60,7 @@ ssh ${VPS_USER}@${VPS_IP} << CERTBOT_EOF
   systemctl stop nginx 2>/dev/null || true
 
   # Get SSL certificate
-  certbot certonly --standalone -d ${DOMAIN} -d www.${DOMAIN} --non-interactive --agree-tos --email admin@${DOMAIN} || true
+  certbot certonly --standalone -d ${DOMAIN} -d www.${DOMAIN} -d admin.${DOMAIN} -d agent.${DOMAIN} -d client.${DOMAIN} --non-interactive --agree-tos --email admin@${DOMAIN} || true
 
   # Copy certs for Docker
   mkdir -p ${APP_DIR}/nginx/certs
@@ -112,7 +112,7 @@ ssh ${VPS_USER}@${VPS_IP} << 'START_EOF'
 
   echo ""
   echo "=== Deployment Complete ==="
-  echo "Panel: https://signalpulses.in"
+  echo "Panel: https://insightodds.com"
   echo "Admin login: admin / Admin@123"
   echo ""
   echo "IMPORTANT: Change the admin password after first login!"

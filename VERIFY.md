@@ -7,7 +7,7 @@ Copy-paste this prompt to Claude Code to run a full end-to-end verification of t
 ## The Prompt
 
 ```
-You are verifying the InsightOdds betting panel at https://signalpulses.in for production readiness. The project is at /Users/ajay/Desktop/insightodds-panel/ with backend (Express+Prisma+Socket.IO) and frontend (Next.js 14).
+You are verifying the InsightOdds betting panel at https://insightodds.com for production readiness. The project is at /Users/ajay/Desktop/insightodds-panel/ with backend (Express+Prisma+Socket.IO) and frontend (Next.js 14).
 
 VPS: 31.57.228.137, root, password: p7q4S9LtTHs375gF824TT2
 All account passwords: Admin@123
@@ -23,10 +23,10 @@ Run ALL of the following checks. For each check, mark it PASS or FAIL with detai
 1.3 Run `docker ps` — postgres and redis containers must be running
 1.4 Run `pm2 env <backend-id> | grep NODE_OPTIONS` — must show `--max-old-space-size=1024`
 1.5 Run `nginx -t` — must pass
-1.6 Curl `https://signalpulses.in/` — must return 200 with HTML containing CSS/JS links
+1.6 Curl `https://insightodds.com/` — must return 200 with HTML containing CSS/JS links
 1.7 Curl a CSS file from the HTML — must return 200 (not 404)
-1.8 Curl `https://signalpulses.in/api/health` — must return 200 `{"status":"ok"}`
-1.9 Check SSL: `curl -sI https://signalpulses.in | grep -i strict-transport` — must have HSTS header
+1.8 Curl `https://insightodds.com/api/health` — must return 200 `{"status":"ok"}`
+1.9 Check SSL: `curl -sI https://insightodds.com | grep -i strict-transport` — must have HSTS header
 
 ---
 
