@@ -1,0 +1,562 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── ENUMS ──────────────────────────────────────────────────
+
+enum Role {
+  SUPER_ADMIN
+  ADMIN
+  AGENT
+  CLIENT
+}
+
+enum TransactionType {
+  DEPOSIT
+  WITHDRAW
+  CHIPS
+  FREE_CHIPS
+  PROFIT
+  LOSS
+  SETTLEMENT
+  GAME_REPORT
+  BALANCE_REPORT
+  LIABILITY
+  ROLL_BACK
+  COMMISSION
+  BET_PLACED
+  BET_WON
+  BET_LOST
+  BET_VOID
+}
+
+enum BetStatus {
+  MATCHED
+  UNMATCHED
+  DELETED
+}
+
+enum BetType {
+  BACK
+  LAY
+}
+
+enum Sport {
+  CRICKET
+  SOCCER
+  TENNIS
+  CASINO
+  MATKA
+}
+
+enum MatchType {
+  ODI
+  T20
+  TEST
+}
+
+enum MarketType {
+  MATCH_ODDS
+  BOOKMAKER
+  FANCY
+}
+
+enum MatkaBetType {
+  ANDAR_DHAI
+  BAHAR_HARUF
+  JODI
+}
+
+enum ActivityType {
+  LOGIN
+  CHANGE_PASSWORD
+}
+
+enum LimitType {
+  CREDIT_REFERENCE
+  EXPOSURE_LIMIT
+}
+
+enum CasinoGameType {
+  AVIATOR
+  BLACKJACK
+}
+
+enum CasinoRoundStatus {
+  BETTING
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+enum CasinoBetStatus {
+  PENDING
+  WON
+  LOST
+  CASHED_OUT
+  CANCELLED
+}
+
+// ─── USER ───────────────────────────────────────────────────
+
+model User {
+  id                  String  @id @default(cuid())
+  username            String  @unique
+  password            String
+  transactionPassword String?
+  name                String
+  mobile              String?
+  reference           String?
+  role                Role
+  balance             Decimal @default(0) @db.Decimal(18, 2)
+  exposure            Decimal @default(0) @db.Decimal(18, 2)
+  creditReference     Decimal @default(0) @db.Decimal(18, 2)
+  exposureLimit       Decimal @default(0) @db.Decimal(18, 2)
+
+  // Partnerships (percentage this level keeps)
+  myPartnership       Decimal @default(0) @db.Decimal(5, 2)
+  myCasinoPartnership Decimal @default(0) @db.Decimal(5, 2)
+  myMatkaPartnership  Decimal @default(0) @db.Decimal(5, 2)
+
+  // Commissions (percentage)
+  matchCommission   Decimal @default(0) @db.Decimal(5, 2)
+  sessionCommission Decimal @default(0) @db.Decimal(5, 2)
+  casinoCommission  Decimal @default(0) @db.Decimal(5, 2)
+  matkaCommission   Decimal @default(0) @db.Decimal(5, 2)
+
+  // Locks & Status
+  isActive              Boolean @default(true)
+  isBetLocked           Boolean @default(false)
+  isCasinoLocked        Boolean @default(false)
+  isMatkaLocked         Boolean @default(false)
+  resetPasswordRequired Boolean @default(false)
+
+  // Hierarchy
+  parentId String?
+  parent   User?   @relation("UserHierarchy", fields: [parentId], references: [id])
+  children User[]  @relation("UserHierarchy")
+
+  lastLogin DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  // Relations
+  transactions  Transaction[]
+  bets          Bet[]
+  fancyBets     FancyBet[]
+  matkaBets     MatkaBet[]
+  commissions   CommissionRecord[]
+  activityLogs  ActivityLog[]
+  auditLogs     AuditLog[]
+  notifications Notification[]
+  casinoBets    CasinoBet[]
+
+  @@index([parentId])
+  @@index([role])
+}
+
+// ─── TRANSACTIONS ───────────────────────────────────────────
+
+model Transaction {
+  id        String          @id @default(cuid())
+  userId    String
+  user      User            @relation(fields: [userId], references: [id])
+  type      TransactionType
+  amount    Decimal         @db.Decimal(18, 2)
+  balance   Decimal         @db.Decimal(18, 2)
+  reference String?
+  remarks   String?
+  createdBy String?
+  createdAt DateTime        @default(now())
+
+  @@index([userId])
+  @@index([type])
+  @@index([createdAt])
+}
+
+// ─── CRICKET EVENTS (replaces Match) ────────────────────────
+
+model CricketEvent {
+  id             String    @id @default(cuid())
+  cricketId      Int       @unique // from Shakti11 API
+  gameId         String?
+  eventId        String?
+  marketId       String?
+  eventName      String
+  team1          String
+  team2          String
+  matchType      MatchType @default(T20)
+  competition    String?
+  startTime      DateTime?
+  inPlay         Boolean   @default(false)
+  isActive       Boolean   @default(true)
+  isSettled      Boolean   @default(false)
+  isBetLocked    Boolean   @default(false)
+  isFancyLocked  Boolean   @default(false)
+  minBet         Decimal   @default(100) @db.Decimal(18, 2)
+  maxBet         Decimal   @default(500000) @db.Decimal(18, 2)
+  oddsDifference Decimal   @default(0) @db.Decimal(5, 2)
+
+  // Live data (JSON blobs from API, cached)
+  matchOddsData Json? // back/lay 3-deep ladder
+  bookmakerData Json? // bookmaker odds
+  fancyOddsData Json? // fancy markets odds
+  scoreData     Json? // live score
+
+  // Per-user locks
+  betLockedUsers   String[] @default([])
+  fancyLockedUsers String[] @default([])
+
+  winner    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  markets   Market[]
+  bets      Bet[]
+  fancyBets FancyBet[]
+
+  @@index([inPlay])
+  @@index([isSettled])
+}
+
+// ─── MARKET ─────────────────────────────────────────────────
+
+model Market {
+  id               String       @id @default(cuid())
+  cricketEventId   String
+  cricketEvent     CricketEvent @relation(fields: [cricketEventId], references: [id])
+  externalMarketId String
+  marketName       String
+  marketType       MarketType
+  gameType         String? // e.g. SESSION, BALL_BY_BALL, NORMAL
+  isActive         Boolean      @default(true)
+  isBetLocked      Boolean      @default(false)
+  minBet           Decimal      @default(100) @db.Decimal(18, 2)
+  maxBet           Decimal      @default(500000) @db.Decimal(18, 2)
+  result           String?
+  finalScore       Int?
+  isSettled        Boolean      @default(false)
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  @@unique([cricketEventId, externalMarketId])
+  @@index([cricketEventId])
+  @@index([marketType])
+}
+
+// ─── BET (match odds + bookmaker) ───────────────────────────
+
+model Bet {
+  id             String       @id @default(cuid())
+  userId         String
+  user           User         @relation(fields: [userId], references: [id])
+  cricketEventId String
+  cricketEvent   CricketEvent @relation(fields: [cricketEventId], references: [id])
+  marketId       String // external market ID string
+  selectionId    Int
+  runnerName     String
+  marketName     String?
+  betType        BetType
+  sport          Sport        @default(CRICKET)
+  amount         Decimal      @db.Decimal(18, 2)
+  rate           Decimal      @db.Decimal(10, 4) // the odds
+  back           Decimal?     @db.Decimal(10, 4)
+  backRate       Decimal?     @db.Decimal(10, 4)
+  lay            Decimal?     @db.Decimal(10, 4)
+  layRate        Decimal?     @db.Decimal(10, 4)
+  profit         Decimal      @db.Decimal(18, 2)
+  loss           Decimal      @db.Decimal(18, 2)
+  profitLoss     Decimal?     @db.Decimal(18, 2) // after settlement
+  betStatus      BetStatus    @default(MATCHED)
+  isMatched      Boolean      @default(true)
+  result         String?
+  ip             String?
+  settledAt      DateTime?
+  createdAt      DateTime     @default(now())
+
+  @@index([userId])
+  @@index([cricketEventId])
+  @@index([betStatus])
+  @@index([marketId])
+}
+
+// ─── FANCY BET ──────────────────────────────────────────────
+
+model FancyBet {
+  id             String       @id @default(cuid())
+  userId         String
+  user           User         @relation(fields: [userId], references: [id])
+  cricketEventId String
+  cricketEvent   CricketEvent @relation(fields: [cricketEventId], references: [id])
+  marketId       String // external market ID string
+  marketName     String?
+  runnerName     String?
+  gameType       String?
+  amount         Decimal      @db.Decimal(18, 2)
+  oddsBack       Decimal?     @db.Decimal(10, 4)
+  oddsLay        Decimal?     @db.Decimal(10, 4)
+  backRate       Decimal?     @db.Decimal(10, 4)
+  layRate        Decimal?     @db.Decimal(10, 4)
+  profit         Decimal      @db.Decimal(18, 2)
+  loss           Decimal      @db.Decimal(18, 2)
+  profitLoss     Decimal?     @db.Decimal(18, 2)
+  betStatus      BetStatus    @default(MATCHED)
+  result         String?
+  ip             String?
+  settledAt      DateTime?
+  createdAt      DateTime     @default(now())
+
+  @@index([userId])
+  @@index([cricketEventId])
+  @@index([betStatus])
+  @@index([marketId])
+}
+
+// ─── MATKA ──────────────────────────────────────────────────
+
+model Matka {
+  id         String   @id @default(cuid())
+  name       String
+  openTime   String // HH:mm format
+  closeTime  String
+  resultTime String
+  minStack   Decimal  @default(10) @db.Decimal(18, 2)
+  maxStack   Decimal  @default(50000) @db.Decimal(18, 2)
+  isEnabled  Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  markets MatkaMarket[]
+}
+
+model MatkaMarket {
+  id              String   @id @default(cuid())
+  matkaId         String
+  matka           Matka    @relation(fields: [matkaId], references: [id])
+  dateId          String? // YYYY-MM-DD identifier
+  isActive        Boolean  @default(true)
+  isEnabled       Boolean  @default(true)
+  isMarketSettled Boolean  @default(false)
+  result          Int?
+  minStack        Decimal  @default(10) @db.Decimal(18, 2)
+  maxStack        Decimal  @default(50000) @db.Decimal(18, 2)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  bets MatkaBet[]
+
+  @@index([matkaId])
+  @@index([isMarketSettled])
+}
+
+model MatkaBet {
+  id            String       @id @default(cuid())
+  userId        String
+  user          User         @relation(fields: [userId], references: [id])
+  matkaMarketId String
+  matkaMarket   MatkaMarket  @relation(fields: [matkaMarketId], references: [id])
+  betType       MatkaBetType
+  numbers       Json // array of { number: int, amount: decimal }
+  totalAmount   Decimal      @db.Decimal(18, 2)
+  profitLoss    Decimal?     @db.Decimal(18, 2)
+  betStatus     BetStatus    @default(MATCHED)
+  isWinning     Boolean      @default(false)
+  result        Int?
+  ip            String?
+  createdAt     DateTime     @default(now())
+
+  @@index([userId])
+  @@index([matkaMarketId])
+  @@index([betStatus])
+}
+
+// ─── COMMISSION ─────────────────────────────────────────────
+
+model CommissionRecord {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  betId     String
+  amount    Decimal  @db.Decimal(18, 2)
+  rate      Decimal  @db.Decimal(5, 2)
+  sport     Sport    @default(CRICKET)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([betId])
+}
+
+// ─── ANNOUNCEMENTS & BANNERS ────────────────────────────────
+
+model Announcement {
+  id           String   @id @default(cuid())
+  announcement String
+  isActive     Boolean  @default(true)
+  priority     Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model DashboardBanner {
+  id             String   @id @default(cuid())
+  bannerUrl      String
+  bannerPriority Int      @default(0)
+  fromDate       DateTime
+  toDate         DateTime
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+// ─── ACTIVITY LOG ───────────────────────────────────────────
+
+model ActivityLog {
+  id           String       @id @default(cuid())
+  userId       String
+  user         User         @relation(fields: [userId], references: [id])
+  activityType ActivityType
+  ip           String?
+  userAgent    String?
+  createdAt    DateTime     @default(now())
+
+  @@index([userId])
+  @@index([activityType])
+  @@index([createdAt])
+}
+
+// ─── RETAINED MODELS ────────────────────────────────────────
+
+model WhitelabelConfig {
+  id             String   @id @default(cuid())
+  siteName       String   @default("Shakti11")
+  logoUrl        String?
+  primaryColor   String   @default("#1e40af")
+  secondaryColor String   @default("#f59e0b")
+  accentColor    String   @default("#10b981")
+  bgColor        String   @default("#0f172a")
+  cardColor      String   @default("#1e293b")
+  textColor      String   @default("#f8fafc")
+  features       Json     @default("{}")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  action    String
+  entity    String
+  entityId  String?
+  oldData   Json?
+  newData   Json?
+  ip        String?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  title     String
+  message   String
+  type      String
+  isRead    Boolean  @default(false)
+  data      Json?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([isRead])
+}
+
+model SystemSettings {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ─── AUTOMATION RULES ──────────────────────────────────────
+
+model AutomationRule {
+  id        String   @id @default(cuid())
+  name      String
+  type      String // ODDS_MANIPULATION, LIABILITY_THRESHOLD, BET_DELAY, SHARP_DETECTION, AUTO_LOCK, MARGIN_CONTROL
+  config    Json
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([type])
+  @@index([isActive])
+}
+
+// ─── CASINO ───────────────────────────────────────────────
+
+model CasinoGame {
+  id        String         @id @default(cuid())
+  gameType  CasinoGameType @unique
+  name      String
+  isActive  Boolean        @default(true)
+  minBet    Decimal        @default(10) @db.Decimal(18, 2)
+  maxBet    Decimal        @default(100000) @db.Decimal(18, 2)
+  houseEdge Decimal        @default(3) @db.Decimal(5, 2)
+  config    Json           @default("{}")
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  rounds CasinoRound[]
+}
+
+model CasinoRound {
+  id          String             @id @default(cuid())
+  gameId      String
+  game        CasinoGame         @relation(fields: [gameId], references: [id])
+  roundNumber Int
+  status      CasinoRoundStatus  @default(BETTING)
+  crashPoint  Decimal?           @db.Decimal(10, 2)
+  serverSeed  String?
+  hashChain   String?
+  dealerCards Json?
+  dealerScore Int?
+  startedAt   DateTime           @default(now())
+  endedAt     DateTime?
+
+  bets CasinoBet[]
+
+  @@index([gameId])
+  @@index([status])
+  @@index([roundNumber])
+}
+
+model CasinoBet {
+  id              String          @id @default(cuid())
+  userId          String
+  user            User            @relation(fields: [userId], references: [id])
+  roundId         String
+  round           CasinoRound     @relation(fields: [roundId], references: [id])
+  amount          Decimal         @db.Decimal(18, 2)
+  cashOutMultiplier Decimal?      @db.Decimal(10, 2)
+  playerCards     Json?
+  playerScore     Int?
+  actions         Json?
+  profitLoss      Decimal?        @db.Decimal(18, 2)
+  status          CasinoBetStatus @default(PENDING)
+  settledAt       DateTime?
+  createdAt       DateTime        @default(now())
+
+  @@index([userId])
+  @@index([roundId])
+  @@index([status])
+}
