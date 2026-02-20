@@ -1,8 +1,8 @@
 import axios from 'axios';
 import { redis } from '../utils/redis';
 
-const SHAKTI11_CM_BASE = 'https://api.shakti11.com/cm/v1';
-const SHAKTI11_AAM_BASE = 'https://api.shakti11.com/aam/v1';
+const ODDS_API_CM_BASE = 'https://api.shakti11.com/cm/v1';
+const ODDS_API_AAM_BASE = 'https://api.shakti11.com/aam/v1';
 
 const headers = {
   'Accept': 'application/json',
@@ -13,7 +13,7 @@ const headers = {
 
 // ─── INTERFACES ─────────────────────────────────────────────
 
-export interface Shakti11Match {
+export interface ApiMatch {
   cricketId: number;
   gameId: string;
   marketId: string;
@@ -78,7 +78,7 @@ export interface MatchOddsResponse {
   fancyOdds: MarketOdds[];
 }
 
-export interface Shakti11ScoreData {
+export interface ApiScoreData {
   score1: string;
   score2: string;
   spnnation1: string;
@@ -98,13 +98,13 @@ export interface Shakti11ScoreData {
 
 // ─── SCRAPER ────────────────────────────────────────────────
 
-class Shakti11Scraper {
+class OddsApiScraper {
   /**
    * Fetch all matches from dashboard (back1/lay1 per team, inPlay status)
    * TTL: 5s
    */
-  async getDashboardMatches(): Promise<Shakti11Match[]> {
-    const cacheKey = 'shakti11:dashboard';
+  async getDashboardMatches(): Promise<ApiMatch[]> {
+    const cacheKey = 'io:dashboard';
     try {
       const cached = await redis.get(cacheKey);
       if (cached) return JSON.parse(cached);
@@ -112,18 +112,18 @@ class Shakti11Scraper {
 
     try {
       const { data } = await axios.get(
-        `${SHAKTI11_CM_BASE}/cricket/all-matches-dashboard`,
+        `${ODDS_API_CM_BASE}/cricket/all-matches-dashboard`,
         { headers, timeout: 10000 }
       );
 
       if (data.status === 'success' && data.code === 200) {
-        const matches = data.response as Shakti11Match[];
+        const matches = data.response as ApiMatch[];
         try { await redis.setex(cacheKey, 5, JSON.stringify(matches)); } catch {}
         return matches;
       }
       return [];
     } catch (error: any) {
-      console.error('Shakti11 dashboard fetch failed:', error.message);
+      console.error('Dashboard fetch failed:', error.message);
       return [];
     }
   }
@@ -133,7 +133,7 @@ class Shakti11Scraper {
    * TTL: 3s
    */
   async getMatchOdds(cricketId: number): Promise<MatchOddsResponse | null> {
-    const cacheKey = `shakti11:odds:${cricketId}`;
+    const cacheKey = `io:odds:${cricketId}`;
     try {
       const cached = await redis.get(cacheKey);
       if (cached) return JSON.parse(cached);
@@ -141,7 +141,7 @@ class Shakti11Scraper {
 
     try {
       const { data } = await axios.get(
-        `${SHAKTI11_CM_BASE}/cricket/odds/${cricketId}`,
+        `${ODDS_API_CM_BASE}/cricket/odds/${cricketId}`,
         { headers, timeout: 10000 }
       );
 
@@ -152,7 +152,7 @@ class Shakti11Scraper {
       }
       return null;
     } catch (error: any) {
-      console.error(`Shakti11 odds fetch failed for ${cricketId}:`, error.message);
+      console.error(`Odds fetch failed for ${cricketId}:`, error.message);
       return null;
     }
   }
@@ -161,8 +161,8 @@ class Shakti11Scraper {
    * Fetch live score data
    * TTL: 5s
    */
-  async fetchScore(eventId: string): Promise<Shakti11ScoreData | null> {
-    const cacheKey = `shakti11:score:${eventId}`;
+  async fetchScore(eventId: string): Promise<ApiScoreData | null> {
+    const cacheKey = `io:score:${eventId}`;
     try {
       const cached = await redis.get(cacheKey);
       if (cached) return JSON.parse(cached);
@@ -170,19 +170,19 @@ class Shakti11Scraper {
 
     try {
       const { data } = await axios.post(
-        `${SHAKTI11_AAM_BASE}/auth/score-sport2?eventId=${eventId}`,
+        `${ODDS_API_AAM_BASE}/auth/score-sport2?eventId=${eventId}`,
         null,
         { headers, timeout: 8000 }
       );
 
       if (data.status === 'success' && data.code === 200 && data.response?.data?.score) {
-        const score = data.response.data.score as Shakti11ScoreData;
+        const score = data.response.data.score as ApiScoreData;
         try { await redis.setex(cacheKey, 5, JSON.stringify(score)); } catch {}
         return score;
       }
       return null;
     } catch (error: any) {
-      console.debug(`Shakti11 score fetch failed for ${eventId}: ${error.message}`);
+      console.debug(`Score fetch failed for ${eventId}: ${error.message}`);
       return null;
     }
   }
@@ -192,7 +192,7 @@ class Shakti11Scraper {
    * TTL: 30s
    */
   async getAllMatches(): Promise<any> {
-    const cacheKey = 'shakti11:all-matches';
+    const cacheKey = 'io:all-matches';
     try {
       const cached = await redis.get(cacheKey);
       if (cached) return JSON.parse(cached);
@@ -200,7 +200,7 @@ class Shakti11Scraper {
 
     try {
       const { data } = await axios.get(
-        `${SHAKTI11_CM_BASE}/cricket/all-matches`,
+        `${ODDS_API_CM_BASE}/cricket/all-matches`,
         { headers, timeout: 10000 }
       );
 
@@ -210,7 +210,7 @@ class Shakti11Scraper {
       }
       return null;
     } catch (error: any) {
-      console.error('Shakti11 all-matches fetch failed:', error.message);
+      console.error('All-matches fetch failed:', error.message);
       return null;
     }
   }
@@ -220,7 +220,7 @@ class Shakti11Scraper {
    * TTL: 60s
    */
   async getStreamingUrl(eventId: string): Promise<any> {
-    const cacheKey = `shakti11:stream:${eventId}`;
+    const cacheKey = `io:stream:${eventId}`;
     try {
       const cached = await redis.get(cacheKey);
       if (cached) return JSON.parse(cached);
@@ -228,7 +228,7 @@ class Shakti11Scraper {
 
     try {
       const { data } = await axios.get(
-        `${SHAKTI11_AAM_BASE}/auth/streaming/${eventId}`,
+        `${ODDS_API_AAM_BASE}/auth/streaming/${eventId}`,
         { headers, timeout: 10000 }
       );
 
@@ -238,7 +238,7 @@ class Shakti11Scraper {
       }
       return null;
     } catch (error: any) {
-      console.debug(`Shakti11 streaming fetch failed for ${eventId}: ${error.message}`);
+      console.debug(`Streaming fetch failed for ${eventId}: ${error.message}`);
       return null;
     }
   }
@@ -338,4 +338,4 @@ class Shakti11Scraper {
   }
 }
 
-export const shakti11Scraper = new Shakti11Scraper();
+export const oddsApiScraper = new OddsApiScraper();

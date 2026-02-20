@@ -5,13 +5,13 @@ services:
     image: postgres:16-alpine
     restart: always
     environment:
-      POSTGRES_USER: shakti11
+      POSTGRES_USER: insightodds
       POSTGRES_PASSWORD: ${DB_PASSWORD:-changeme_strong_password}
-      POSTGRES_DB: shakti11
+      POSTGRES_DB: insightodds
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U shakti11"]
+      test: ["CMD-SHELL", "pg_isready -U insightodds"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -34,7 +34,7 @@ services:
       dockerfile: Dockerfile.prod
     restart: always
     environment:
-      DATABASE_URL: postgresql://shakti11:${DB_PASSWORD:-changeme_strong_password}@postgres:5432/shakti11?schema=public
+      DATABASE_URL: postgresql://insightodds:${DB_PASSWORD:-changeme_strong_password}@postgres:5432/insightodds?schema=public
       REDIS_URL: redis://:${REDIS_PASSWORD:-changeme_redis_password}@redis:6379
       JWT_SECRET: ${JWT_SECRET}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}

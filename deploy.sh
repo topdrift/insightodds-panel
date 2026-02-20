@@ -1,5 +1,5 @@
 #!/bin/bash
-# Deploy Shakti11 Panel to VPS
+# Deploy InsightOdds Panel to VPS
 # Usage: ./deploy.sh
 
 set -e
@@ -7,9 +7,9 @@ set -e
 VPS_IP="31.57.228.137"
 VPS_USER="root"
 DOMAIN="signalpulses.in"
-APP_DIR="/opt/shakti11"
+APP_DIR="/opt/insightodds"
 
-echo "=== Shakti11 Panel Deployment ==="
+echo "=== InsightOdds Panel Deployment ==="
 echo "Target: ${VPS_USER}@${VPS_IP}"
 echo ""
 
@@ -34,13 +34,13 @@ ssh ${VPS_USER}@${VPS_IP} << 'SETUP_EOF'
   apt-get install -y -qq certbot nginx > /dev/null 2>&1 || true
 
   # Create app directory
-  mkdir -p /opt/shakti11
+  mkdir -p /opt/insightodds
 SETUP_EOF
 
 # Step 2: Sync project files
 echo "[2/5] Syncing project files..."
 rsync -avz --exclude 'node_modules' --exclude '.next' --exclude 'dist' \
-  /Users/ajay/Desktop/shakti11-panel/ ${VPS_USER}@${VPS_IP}:${APP_DIR}/
+  /Users/ajay/Desktop/insightodds-panel/ ${VPS_USER}@${VPS_IP}:${APP_DIR}/
 
 # Step 3: Setup SSL
 echo "[3/5] Setting up SSL..."
@@ -75,7 +75,7 @@ CERTBOT_EOF
 # Step 4: Setup production env
 echo "[4/5] Setting up environment..."
 ssh ${VPS_USER}@${VPS_IP} << 'ENV_EOF'
-  cd /opt/shakti11
+  cd /opt/insightodds
 
   if [ ! -f .env ]; then
     JWT_SECRET=$(openssl rand -hex 32)
@@ -100,7 +100,7 @@ ENV_EOF
 # Step 5: Build and start
 echo "[5/5] Building and starting services..."
 ssh ${VPS_USER}@${VPS_IP} << 'START_EOF'
-  cd /opt/shakti11
+  cd /opt/insightodds
   docker-compose -f docker-compose.prod.yml down 2>/dev/null || true
   docker-compose -f docker-compose.prod.yml build --no-cache
   docker-compose -f docker-compose.prod.yml up -d

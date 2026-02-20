@@ -484,7 +484,7 @@ export default function SettingsPage() {
           <InfoRow
             icon={<Globe className="h-4 w-4 text-gray-400" />}
             label="Platform"
-            value={config.siteName || 'Shakti11'}
+            value={config.siteName || 'InsightOdds'}
           />
           <InfoRow
             icon={<Info className="h-4 w-4 text-gray-400" />}
@@ -494,7 +494,7 @@ export default function SettingsPage() {
           <InfoRow
             icon={<HelpCircle className="h-4 w-4 text-gray-400" />}
             label="Support"
-            value="support@shakti11.com"
+            value="support@insightodds.com"
           />
         </div>
       </SettingsSection>

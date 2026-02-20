@@ -1,4 +1,4 @@
-# Shakti11 Panel — Production Verification Prompt
+# InsightOdds Panel — Production Verification Prompt
 
 Copy-paste this prompt to Claude Code to run a full end-to-end verification of the panel before going live.
 
@@ -7,7 +7,7 @@ Copy-paste this prompt to Claude Code to run a full end-to-end verification of t
 ## The Prompt
 
 ```
-You are verifying the Shakti11 betting panel at https://signalpulses.in for production readiness. The project is at /Users/ajay/Desktop/shakti11-panel/ with backend (Express+Prisma+Socket.IO) and frontend (Next.js 14).
+You are verifying the InsightOdds betting panel at https://signalpulses.in for production readiness. The project is at /Users/ajay/Desktop/insightodds-panel/ with backend (Express+Prisma+Socket.IO) and frontend (Next.js 14).
 
 VPS: 31.57.228.137, root, password: p7q4S9LtTHs375gF824TT2
 All account passwords: Admin@123
@@ -18,7 +18,7 @@ Run ALL of the following checks. For each check, mark it PASS or FAIL with detai
 
 ### SECTION 1: INFRASTRUCTURE HEALTH
 
-1.1 SSH into VPS, run `pm2 status` — both `shakti11-backend` and `shakti11-frontend` must be online with 0 restarts
+1.1 SSH into VPS, run `pm2 status` — both `insightodds-backend` and `insightodds-frontend` must be online with 0 restarts
 1.2 Run `free -m` — available RAM must be >500MB
 1.3 Run `docker ps` — postgres and redis containers must be running
 1.4 Run `pm2 env <backend-id> | grep NODE_OPTIONS` — must show `--max-old-space-size=1024`

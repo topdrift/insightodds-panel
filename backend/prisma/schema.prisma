@@ -188,7 +188,7 @@ model Transaction {
 
 model CricketEvent {
   id             String    @id @default(cuid())
-  cricketId      Int       @unique // from Shakti11 API
+  cricketId      Int       @unique // from external odds API
   gameId         String?
   eventId        String?
   marketId       String?
@@ -439,7 +439,7 @@ model ActivityLog {
 
 model WhitelabelConfig {
   id             String   @id @default(cuid())
-  siteName       String   @default("Shakti11")
+  siteName       String   @default("InsightOdds")
   logoUrl        String?
   primaryColor   String   @default("#1e40af")
   secondaryColor String   @default("#f59e0b")

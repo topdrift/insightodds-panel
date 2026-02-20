@@ -1,6 +1,6 @@
 import { Server as SocketServer } from 'socket.io';
 import { prisma } from '../utils/prisma';
-import { shakti11Scraper, Shakti11Match } from './shakti11-scraper';
+import { oddsApiScraper, ApiMatch } from './odds-api-scraper';
 
 let pollerIO: SocketServer | null = null;
 let dashboardTimer: ReturnType<typeof setInterval> | null = null;
@@ -15,7 +15,7 @@ function detectMatchType(eventName: string): 'ODI' | 'T20' | 'TEST' {
   return 'T20';
 }
 
-function isValidMatch(m: Shakti11Match): boolean {
+function isValidMatch(m: ApiMatch): boolean {
   if (!m.eventName || !m.eventName.includes(' v ')) return false;
   if (!m.cricketId) return false;
   if (m.eventName.includes('Test A v Test B')) return false;
@@ -29,7 +29,7 @@ function isValidMatch(m: Shakti11Match): boolean {
  */
 async function syncDashboard() {
   try {
-    const matches = await shakti11Scraper.getDashboardMatches();
+    const matches = await oddsApiScraper.getDashboardMatches();
     const valid = matches.filter(isValidMatch);
 
     let liveCount = 0;
@@ -131,7 +131,7 @@ async function syncLiveOdds() {
 
     for (const event of liveEvents) {
       try {
-        const odds = await shakti11Scraper.getMatchOdds(event.cricketId);
+        const odds = await oddsApiScraper.getMatchOdds(event.cricketId);
         if (!odds) continue;
 
         // Apply oddsDifference manipulation
@@ -163,7 +163,7 @@ async function syncLiveOdds() {
 
         // Broadcast to match room
         if (pollerIO) {
-          const parsed = shakti11Scraper.getDetailedOdds(event.cricketId);
+          const parsed = oddsApiScraper.getDetailedOdds(event.cricketId);
           pollerIO.to(`match:${event.cricketId}`).emit(`odds:match:${event.cricketId}`, await parsed);
 
           if (odds.bookMakerOdds?.length) {
@@ -197,7 +197,7 @@ async function syncScores() {
         const scoreEventId = event.gameId || event.eventId;
         if (!scoreEventId) continue;
 
-        const score = await shakti11Scraper.fetchScore(scoreEventId);
+        const score = await oddsApiScraper.fetchScore(scoreEventId);
         if (!score) continue;
 
         await prisma.cricketEvent.update({

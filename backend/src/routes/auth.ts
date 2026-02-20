@@ -4,7 +4,7 @@ import jwt from 'jsonwebtoken';
 import { z } from 'zod';
 import { prisma } from '../utils/prisma';
 import { authenticate, AuthRequest } from '../middleware/auth';
-import { shakti11Scraper } from '../services/shakti11-scraper';
+import { oddsApiScraper } from '../services/odds-api-scraper';
 
 const router = Router();
 
@@ -278,7 +278,7 @@ router.post('/score-sport2', async (req, res) => {
     const eventId = req.query.eventId as string;
     if (!eventId) return res.status(400).json({ error: 'eventId required' });
 
-    const score = await shakti11Scraper.fetchScore(eventId);
+    const score = await oddsApiScraper.fetchScore(eventId);
     res.json({ status: 'success', code: 200, response: { data: { score } } });
   } catch {
     res.status(500).json({ error: 'Failed to fetch score' });
@@ -288,7 +288,7 @@ router.post('/score-sport2', async (req, res) => {
 // GET /api/auth/streaming/:eventId — proxy streaming
 router.get('/streaming/:eventId', async (req, res) => {
   try {
-    const data = await shakti11Scraper.getStreamingUrl(req.params.eventId);
+    const data = await oddsApiScraper.getStreamingUrl(req.params.eventId);
     res.json({ status: 'success', code: 200, response: data });
   } catch {
     res.status(500).json({ error: 'Failed to fetch streaming' });

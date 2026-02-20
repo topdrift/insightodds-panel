@@ -100,7 +100,7 @@ export const useAuthStore = create<AuthState>()(
       },
     }),
     {
-      name: 'shakti11-auth',
+      name: 'insightodds-auth',
       partialize: (state) => ({
         user: state.user,
         accessToken: state.accessToken,

@@ -4,15 +4,15 @@ services:
   postgres:
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: shakti11
-      POSTGRES_PASSWORD: shakti11pass
-      POSTGRES_DB: shakti11
+      POSTGRES_USER: insightodds
+      POSTGRES_PASSWORD: insightoddspass
+      POSTGRES_DB: insightodds
     ports:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U shakti11"]
+      test: ["CMD-SHELL", "pg_isready -U insightodds"]
       interval: 5s
       timeout: 5s
       retries: 5

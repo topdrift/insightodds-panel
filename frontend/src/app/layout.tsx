@@ -11,8 +11,8 @@ const geistSans = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "Shakti11 - Cricket Betting Panel",
-  description: "Shakti11 Whitelabel Cricket Betting Panel",
+  title: "InsightOdds - Cricket Betting Panel",
+  description: "InsightOdds Whitelabel Cricket Betting Panel",
 };
 
 export default function RootLayout({

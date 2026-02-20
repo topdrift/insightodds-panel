@@ -14,7 +14,7 @@ echo "Tokens obtained: SA=$(echo $SA_TOKEN | cut -c1-10)... AG=$(echo $AG_TOKEN 
 echo "Date range: $YESTERDAY to $TOMORROW"
 
 # Get client1 ID
-CL_ID=$(docker exec shakti11-postgres psql -U shakti11 -d shakti11 -t -c "SELECT id FROM \"User\" WHERE username = 'client1';" | xargs)
+CL_ID=$(docker exec insightodds-postgres psql -U insightodds -d insightodds -t -c "SELECT id FROM \"User\" WHERE username = 'client1';" | xargs)
 
 echo ""
 echo "===== STEP 9: AGENT WITHDRAWAL FROM CLIENT ====="
@@ -139,7 +139,7 @@ echo "===== STEP 17: ANNOUNCEMENTS CRUD ====="
 ANN_CREATE=$(curl -s -X POST "$BASE/admin/announcement" \
   -H "Authorization: Bearer $SA_TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"announcement":"Welcome to Shakti11 Panel! Test announcement.","priority":1,"isActive":true}')
+  -d '{"announcement":"Welcome to InsightOdds Panel! Test announcement.","priority":1,"isActive":true}')
 echo "Create announcement: $(echo $ANN_CREATE | jq -c '{message, id: .data.id}')"
 ANN_ID=$(echo $ANN_CREATE | jq -r '.data.id')
 

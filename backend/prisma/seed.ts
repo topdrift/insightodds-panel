@@ -139,7 +139,7 @@ async function main() {
     update: {},
     create: {
       id: 'default',
-      siteName: 'Shakti11',
+      siteName: 'InsightOdds',
       primaryColor: '#1e40af',
       secondaryColor: '#f59e0b',
       accentColor: '#10b981',
@@ -185,7 +185,7 @@ async function main() {
   // Default announcement
   await prisma.announcement.create({
     data: {
-      announcement: 'Welcome to Shakti11! Place your bets on live cricket matches.',
+      announcement: 'Welcome to InsightOdds! Place your bets on live cricket matches.',
       isActive: true,
       priority: 1,
     },

@@ -24,7 +24,7 @@ interface ThemeState {
 }
 
 const defaultConfig: WhitelabelConfig = {
-  siteName: 'Shakti11',
+  siteName: 'InsightOdds',
   logoUrl: null,
   primaryColor: '#1e40af',
   secondaryColor: '#f59e0b',

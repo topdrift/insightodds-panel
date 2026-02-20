@@ -2,7 +2,7 @@ import { Router, Response } from 'express';
 import { z } from 'zod';
 import { prisma } from '../utils/prisma';
 import { authenticate, authorize, AuthRequest } from '../middleware/auth';
-import { shakti11Scraper } from '../services/shakti11-scraper';
+import { oddsApiScraper } from '../services/odds-api-scraper';
 
 const router = Router();
 
@@ -11,7 +11,7 @@ const router = Router();
 // GET /api/cricket/all-matches
 router.get('/all-matches', async (_req, res: Response) => {
   try {
-    const matches = await shakti11Scraper.getAllMatches();
+    const matches = await oddsApiScraper.getAllMatches();
     res.json({ status: 'success', data: matches });
   } catch (err: any) {
     console.error('all-matches error:', err.message);
@@ -22,7 +22,7 @@ router.get('/all-matches', async (_req, res: Response) => {
 // GET /api/cricket/all-matches-dashboard
 router.get('/all-matches-dashboard', async (_req, res: Response) => {
   try {
-    const matches = await shakti11Scraper.getMatchesWithOdds();
+    const matches = await oddsApiScraper.getMatchesWithOdds();
     res.json({ status: 'success', data: matches });
   } catch (err: any) {
     console.error('all-matches-dashboard error:', err.message);
@@ -37,7 +37,7 @@ router.get('/odds/:cricketId', async (req, res: Response) => {
     if (isNaN(cricketId)) {
       return res.status(400).json({ error: 'Invalid cricketId' });
     }
-    const odds = await shakti11Scraper.getDetailedOdds(cricketId);
+    const odds = await oddsApiScraper.getDetailedOdds(cricketId);
     if (!odds) {
       return res.status(404).json({ error: 'Odds not found' });
     }
