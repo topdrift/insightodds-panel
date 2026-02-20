@@ -155,6 +155,11 @@ model User {
   auditLogs     AuditLog[]
   notifications Notification[]
   casinoBets    CasinoBet[]
+  promoCodesAsAgent  PromoCode[]      @relation("PromoAgent")
+  promoRedemptions   PromoRedemption[]
+  depositRequests    DepositRequest[]
+  bankAccounts       BankAccount[]
+  agentFeedbacks     AgentFeedback[]
 
   @@index([parentId])
   @@index([role])
@@ -559,4 +564,145 @@ model CasinoBet {
   @@index([userId])
   @@index([roundId])
   @@index([status])
+}
+
+// ─── PROMO CODES ──────────────────────────────────────────
+
+enum DepositRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum PaymentMethod {
+  UPI
+  BANK_TRANSFER
+  CRYPTO
+}
+
+enum RequestType {
+  DEPOSIT
+  WITHDRAW
+}
+
+enum PromoCodeType {
+  BALANCE_CREDIT
+  REFERRAL_BONUS
+}
+
+model PromoCode {
+  id          String        @id @default(cuid())
+  code        String        @unique
+  type        PromoCodeType
+  description String?
+  amount      Decimal       @default(0) @db.Decimal(18, 2)
+  agentId     String?
+  agent       User?         @relation("PromoAgent", fields: [agentId], references: [id])
+  agentBonus  Decimal       @default(0) @db.Decimal(18, 2)
+  clientBonus Decimal       @default(0) @db.Decimal(18, 2)
+  maxUses     Int           @default(0)
+  usedCount   Int           @default(0)
+  minRole     Role          @default(CLIENT)
+  expiresAt   DateTime?
+  isActive    Boolean       @default(true)
+  createdBy   String
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  redemptions PromoRedemption[]
+
+  @@index([code])
+  @@index([type])
+  @@index([isActive])
+}
+
+model PromoRedemption {
+  id          String    @id @default(cuid())
+  promoCodeId String
+  promoCode   PromoCode @relation(fields: [promoCodeId], references: [id])
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+  amount      Decimal   @db.Decimal(18, 2)
+  ip          String?
+  createdAt   DateTime  @default(now())
+
+  @@unique([promoCodeId, userId])
+  @@index([promoCodeId])
+  @@index([userId])
+}
+
+// ─── DEPOSIT / WITHDRAWAL REQUESTS ──────────────────────
+
+model DepositRequest {
+  id             String               @id @default(cuid())
+  userId         String
+  user           User                 @relation(fields: [userId], references: [id])
+  type           RequestType
+  paymentMethod  PaymentMethod
+  amount         Decimal              @db.Decimal(18, 2)
+  utrReference   String?
+  screenshotUrl  String?
+  bankAccountId  String?
+  bankAccount    BankAccount?         @relation(fields: [bankAccountId], references: [id])
+  cryptoWalletId String?
+  cryptoWallet   CryptoWallet?        @relation(fields: [cryptoWalletId], references: [id])
+  status         DepositRequestStatus @default(PENDING)
+  adminRemarks   String?
+  processedBy    String?
+  processedAt    DateTime?
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@index([type])
+  @@index([createdAt])
+}
+
+// ─── CLIENT BANK ACCOUNTS ───────────────────────────────
+
+model BankAccount {
+  id              String           @id @default(cuid())
+  userId          String
+  user            User             @relation(fields: [userId], references: [id])
+  accountName     String
+  accountNumber   String
+  ifscCode        String
+  bankName        String
+  upiId           String?
+  isDefault       Boolean          @default(false)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  depositRequests DepositRequest[]
+
+  @@index([userId])
+}
+
+// ─── CRYPTO WALLETS (Admin-managed) ─────────────────────
+
+model CryptoWallet {
+  id              String           @id @default(cuid())
+  network         String
+  currency        String
+  address         String
+  qrCodeUrl       String?
+  isActive        Boolean          @default(true)
+  createdBy       String
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  depositRequests DepositRequest[]
+
+  @@index([isActive])
+}
+
+// ─── AGENT FEEDBACK ─────────────────────────────────────
+
+model AgentFeedback {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  message   String
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([createdAt])
 }

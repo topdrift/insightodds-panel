@@ -9,7 +9,7 @@ import {
   LayoutDashboard, Users, Trophy, BarChart3, Settings,
   LogOut, ChevronLeft, ChevronRight, Zap, FileText,
   Megaphone, Image, Gamepad2, ChevronDown, ChevronUp,
-  Bot, Wallet, TrendingUp, X, Menu,
+  Bot, Wallet, TrendingUp, X, Menu, Ticket, Landmark, MessageCircle,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
@@ -55,6 +55,8 @@ const superAdminLinks: NavLink[] = [
   { href: '/automation', label: 'Automation', icon: Bot, section: 'Admin' },
   { href: '/announcements', label: 'Announcements', icon: Megaphone, section: 'Admin' },
   { href: '/banners', label: 'Banners', icon: Image, section: 'Admin' },
+  { href: '/deposits', label: 'Deposits', icon: Landmark, section: 'Admin' },
+  { href: '/promo-codes', label: 'Promo Codes', icon: Ticket, section: 'Admin' },
   { href: '/settings', label: 'Settings', icon: Settings, section: 'Admin' },
 ];
 
@@ -80,6 +82,8 @@ const adminLinks: NavLink[] = [
   { href: '/automation', label: 'Automation', icon: Bot, section: 'Admin' },
   { href: '/announcements', label: 'Announcements', icon: Megaphone, section: 'Admin' },
   { href: '/banners', label: 'Banners', icon: Image, section: 'Admin' },
+  { href: '/deposits', label: 'Deposits', icon: Landmark, section: 'Admin' },
+  { href: '/promo-codes', label: 'Promo Codes', icon: Ticket, section: 'Admin' },
 ];
 
 const agentLinks: NavLink[] = [
@@ -96,6 +100,9 @@ const agentLinks: NavLink[] = [
       { href: '/reports/commission', label: 'Commission' },
     ],
   },
+  { href: '/deposits', label: 'Deposits', icon: Landmark, section: 'Management' },
+  { href: '/community', label: 'Community', icon: MessageCircle, section: 'Management' },
+  { href: '/promo-codes', label: 'Promo Codes', icon: Ticket, section: 'Management' },
 ];
 
 const clientLinks: NavLink[] = [
@@ -112,6 +119,9 @@ const clientLinks: NavLink[] = [
       { href: '/reports/activity-log', label: 'Activity Log' },
     ],
   },
+  { href: '/deposits', label: 'Deposit / Withdraw', icon: Landmark, section: 'Main' },
+  { href: '/bank-accounts', label: 'Bank Accounts', icon: Wallet, section: 'Main' },
+  { href: '/promo-codes', label: 'Redeem Code', icon: Ticket, section: 'Main' },
   { href: '/settings', label: 'Settings', icon: Settings, section: 'Main' },
 ];
 

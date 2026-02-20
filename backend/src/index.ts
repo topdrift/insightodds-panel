@@ -5,6 +5,7 @@ import morgan from 'morgan';
 import compression from 'compression';
 import cookieParser from 'cookie-parser';
 import http from 'http';
+import path from 'path';
 import { Server as SocketServer } from 'socket.io';
 import dotenv from 'dotenv';
 
@@ -30,6 +31,11 @@ import settingsRoutes from './routes/settings';
 import notificationRoutes from './routes/notifications';
 import automationRoutes from './routes/automation';
 import casinoRoutes from './routes/casino';
+import promoRoutes from './routes/promo';
+import depositRequestRoutes from './routes/deposit-request';
+import bankAccountRoutes from './routes/bank-account';
+import cryptoWalletRoutes from './routes/crypto-wallet';
+import communityRoutes from './routes/community';
 import { aviatorEngine } from './services/casino/aviator';
 import { initBlackjack } from './services/casino/blackjack';
 
@@ -66,6 +72,16 @@ app.use(compression());
 app.use(morgan('dev'));
 app.use(express.json());
 app.use(cookieParser());
+app.use('/uploads', express.static(path.join(__dirname, '../uploads'), {
+  dotfiles: 'deny',             // Block .htaccess, .env, etc.
+  index: false,                 // Disable directory listing
+  extensions: ['jpg', 'png', 'webp'], // Only serve image extensions
+  setHeaders: (res) => {
+    res.set('X-Content-Type-Options', 'nosniff');
+    res.set('Content-Disposition', 'inline'); // Display in browser, not execute
+    res.set('Cache-Control', 'private, max-age=3600');
+  },
+}));
 
 // Routes
 app.use('/api/auth', authRoutes);
@@ -79,6 +95,11 @@ app.use('/api/settings', settingsRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/automation', automationRoutes);
 app.use('/api/casino', casinoRoutes);
+app.use('/api/promo', promoRoutes);
+app.use('/api/deposit-request', depositRequestRoutes);
+app.use('/api/bank-account', bankAccountRoutes);
+app.use('/api/crypto-wallet', cryptoWalletRoutes);
+app.use('/api/community', communityRoutes);
 
 // Health check
 app.get('/api/health', (_req, res) => {
