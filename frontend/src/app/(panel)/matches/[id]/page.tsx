@@ -341,17 +341,20 @@ export default function MatchDetailPage() {
 
     socket.emit('match:join', cricketId);
 
+    const safeguardRunners = (markets: any[]) =>
+      markets.map((m: any) => ({ ...m, runners: m.runners || [] }));
+
     const handleMatchOdds = (data: any) => {
       if (data?.matchOdds) {
-        setMatchOdds(data.matchOdds);
+        setMatchOdds(safeguardRunners(data.matchOdds));
       } else if (Array.isArray(data)) {
-        setMatchOdds(data);
+        setMatchOdds(safeguardRunners(data));
       }
     };
 
     const handleBookmakerOdds = (data: any) => {
       if (Array.isArray(data)) {
-        setBookmakerOdds(data);
+        setBookmakerOdds(safeguardRunners(data));
       }
     };
 
@@ -388,7 +391,7 @@ export default function MatchDetailPage() {
       let marketName = '';
 
       for (const market of matchOdds) {
-        const runner = market.runners.find((r) => r.selectionId === selectionId);
+        const runner = (market.runners || []).find((r) => r.selectionId === selectionId);
         if (runner) {
           runnerName = runner.runnerName;
           marketId = market.marketId;
@@ -410,7 +413,7 @@ export default function MatchDetailPage() {
       let marketName = '';
 
       for (const market of bookmakerOdds) {
-        const runner = market.runners.find((r) => r.selectionId === selectionId);
+        const runner = (market.runners || []).find((r) => r.selectionId === selectionId);
         if (runner) {
           runnerName = runner.runnerName;
           marketName = market.marketName || 'Bookmaker';
@@ -551,7 +554,7 @@ export default function MatchDetailPage() {
           />
 
           {/* ─── Match Odds ─────────────────────────────────── */}
-          {primaryMarket && primaryMarket.runners.length > 0 && (
+          {primaryMarket && (primaryMarket.runners || []).length > 0 && (
             <div className="rounded-2xl border border-glass-border bg-glass backdrop-blur-xl shadow-glass overflow-hidden">
               {/* Header */}
               <div className="flex items-center justify-between px-4 py-3 border-b border-glass-border">

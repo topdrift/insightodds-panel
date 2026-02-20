@@ -149,8 +149,8 @@ interface RunnerRowProps {
 }
 
 const RunnerRow = memo(function RunnerRow({ runner, isSuspended, onSelect, isFavorite }: RunnerRowProps) {
-  const backPrices = getBackPrices(runner.back);
-  const layPrices = getLayPrices(runner.lay);
+  const backPrices = getBackPrices(runner.back || []);
+  const layPrices = getLayPrices(runner.lay || []);
 
   const handleClick = useCallback(
     (type: 'BACK' | 'LAY', price: number) => {
@@ -224,7 +224,7 @@ export default function OddsLadder({ runners, marketStatus, onSelect }: OddsLadd
     let minPrice = Infinity;
     let favId = -1;
     for (const r of runners) {
-      const bestBack = r.back.filter(p => p.price > 0).sort((a, b) => b.price - a.price)[0];
+      const bestBack = (r.back || []).filter(p => p.price > 0).sort((a, b) => b.price - a.price)[0];
       if (bestBack && bestBack.price < minPrice) {
         minPrice = bestBack.price;
         favId = r.selectionId;
@@ -252,7 +252,7 @@ export default function OddsLadder({ runners, marketStatus, onSelect }: OddsLadd
 
       {/* Runners */}
       <div className="relative">
-        {runners.map((runner) => (
+        {(runners || []).map((runner) => (
           <RunnerRow
             key={runner.selectionId}
             runner={runner}

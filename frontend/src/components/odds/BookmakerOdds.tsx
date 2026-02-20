@@ -211,7 +211,7 @@ export default function BookmakerOdds({ markets, onSelect }: BookmakerOddsProps)
 
           {/* Runners */}
           <div className="px-0 pb-1">
-            {market.runners.map((runner) => (
+            {(market.runners || []).map((runner) => (
               <BookRunnerRow
                 key={runner.selectionId}
                 runner={runner}

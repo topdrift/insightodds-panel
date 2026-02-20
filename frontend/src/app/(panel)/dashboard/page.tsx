@@ -104,6 +104,7 @@ interface UnsettledBetsResponse {
 // ============================================================
 
 function formatIndianNumber(num: number): string {
+  if (!isFinite(num)) return '\u20B90.00';
   const isNegative = num < 0;
   const abs = Math.abs(num);
   const parts = abs.toFixed(2).split('.');
@@ -311,8 +312,8 @@ function QuickStatsRow({
     );
   }
 
-  const balance = user?.balance ?? 0;
-  const exposure = user?.exposure ?? 0;
+  const balance = Number(user?.balance) || 0;
+  const exposure = Number(user?.exposure) || 0;
   const highExposure = exposure > balance * 0.7;
 
   return (
