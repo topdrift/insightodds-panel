@@ -88,6 +88,7 @@ function hideDealer(cards: Card[]): Card[] {
 
 interface HandResult {
   success: boolean;
+  betId?: string;
   hand?: {
     playerCards: Card[];
     dealerCards: Card[];

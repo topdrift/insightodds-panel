@@ -58,7 +58,7 @@ interface CryptoWallet {
   isActive: boolean;
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
+const API_URL = '';
 
 const statusConfig = {
   PENDING: { label: 'Pending', variant: 'warning' as const, icon: Clock },
